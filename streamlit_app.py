@@ -153,5 +153,51 @@ if submitted or auto_run:
         'hco3': [hco3],
         'pco2': [pco2],
         'be': [be],
+        'cre': [cre],
+        'na': [na],
+        'k': [k],
+        'etco2_core': [etco2_core]
+    }  # <--- 這裡的右大括號一定要有！
+    
+    df = pd.DataFrame(input_data)
+    
+    # Ensure column order matches covariates
+    df = df[covariates_list]
+    
+    # Impute missing values
+    X_imputed = imputer.transform(df)
+    
+    # Predict
+    try:
+        # model.effect(X) returns the CATE (Conditional Average Treatment Effect)
+        ite_pred = model.effect(X_imputed)[0]
+        ite_percent = ite_pred * 100
+        
+        st.divider()
+        st.header("Prediction Results")
+        
+        col_res1, col_res2 = st.columns(2)
+        
+        with col_res1:
+            st.metric(label="Predicted ITE", value=f"{ite_percent:.2f}%")
+            
+        # Determine recommendation based on cutoffs
+        lower_bound = cutoffs[1] 
+        upper_bound = cutoffs[2] 
+        
+        with col_res2:
+            if ite_pred > upper_bound:
+                st.success("Recommendation: **Give Sodium Bicarbonate** (Upper Tertile)")
+                st.markdown(f"ITE > {upper_bound*100:.1f}%")
+            elif ite_pred < lower_bound:
+                st.error("Recommendation: **Do Not Give Sodium Bicarbonate** (Lower Tertile)")
+                st.markdown(f"ITE < {lower_bound*100:.1f}%")
+            else:
+                st.warning("Recommendation: **No Significant Difference** (Middle Tertile)")
+                st.markdown(f"{lower_bound*100:.1f}% <= ITE <= {upper_bound*100:.1f}%")
+                
+    except Exception as e:
+        st.error(f"Prediction failed: {e}")
+
 
 
